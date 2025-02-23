@@ -11,9 +11,9 @@ app_name='skopeo'
 printf 'APP_NAME=%s\n' "$app_name" >> "$CI_ENV_FILE"
 printf 'APP_VERSION=%s\n' "$(getAppVersion)" >> "$CI_ENV_FILE"
 
-printf 'SKOPEO_VERSION=%s\n' '1.16.1' >> "$CI_ENV_FILE"
-printf 'ECR_HELPER_VERSION=%s\n' '0.9.0' >> "$CI_ENV_FILE"
-printf 'GCR_HELPER_VERSION=%s\n' '2.1.25' >> "$CI_ENV_FILE"
+printf 'SKOPEO_VERSION=%s\n' '1.17.0' >> "$CI_ENV_FILE"
+printf 'ECR_HELPER_VERSION=%s\n' '0.9.1' >> "$CI_ENV_FILE"
+printf 'GCR_HELPER_VERSION=%s\n' '2.1.26' >> "$CI_ENV_FILE"
 printf 'ECR_HELPER_VERSION=%s\n' '0.7.0' >> "$CI_ENV_FILE"
 
 printf 'HARBOR_REGISTRY=%s\n' 'harbor.flakybit.net' >> "$CI_ENV_FILE"
