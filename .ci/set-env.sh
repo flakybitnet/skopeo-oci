@@ -11,7 +11,7 @@ app_name='skopeo'
 printf 'APP_NAME=%s\n' "$app_name" >> "$CI_ENV_FILE"
 printf 'APP_VERSION=%s\n' "$(getAppVersion)" >> "$CI_ENV_FILE"
 
-printf 'SKOPEO_VERSION=%s\n' '1.18.0' >> "$CI_ENV_FILE"
+printf 'SKOPEO_VERSION=%s\n' '1.19.0' >> "$CI_ENV_FILE"
 printf 'ECR_HELPER_VERSION=%s\n' '0.10.1' >> "$CI_ENV_FILE"
 printf 'GCR_HELPER_VERSION=%s\n' '2.1.30' >> "$CI_ENV_FILE"
 printf 'ACR_HELPER_VERSION=%s\n' '0.7.0' >> "$CI_ENV_FILE"
