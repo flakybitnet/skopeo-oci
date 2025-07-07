@@ -25,10 +25,10 @@ tar -xzf "docker-credential-gcr_linux_amd64-${GCR_HELPER_VERSION}.tar.gz" docker
 mv docker-credential-gcr "$CRED_HELPERS_DIR"
 
 echo && echo "Downloading ACR Credential Helper"
-wget -nv "https://github.com/chrismellard/docker-credential-acr-env/releases/download/$ECR_HELPER_VERSION/docker-credential-acr-env_${ECR_HELPER_VERSION}_linux_amd64.tar.gz"
-wget -nv "https://github.com/chrismellard/docker-credential-acr-env/releases/download/$ECR_HELPER_VERSION/checksums.txt" -O docker-credential-acr.sha256
+wget -nv "https://github.com/chrismellard/docker-credential-acr-env/releases/download/$ACR_HELPER_VERSION/docker-credential-acr-env_${ACR_HELPER_VERSION}_linux_amd64.tar.gz"
+wget -nv "https://github.com/chrismellard/docker-credential-acr-env/releases/download/$ACR_HELPER_VERSION/checksums.txt" -O docker-credential-acr.sha256
 sha256sum -c --ignore-missing docker-credential-acr.sha256
-tar -xzf "docker-credential-acr-env_${ECR_HELPER_VERSION}_linux_amd64.tar.gz" docker-credential-acr-env
+tar -xzf "docker-credential-acr-env_${ACR_HELPER_VERSION}_linux_amd64.tar.gz" docker-credential-acr-env
 mv docker-credential-acr-env "$CRED_HELPERS_DIR"
 
 echo && echo "$CRED_HELPERS_DIR:"
