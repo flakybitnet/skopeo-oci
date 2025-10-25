@@ -1,0 +1,125 @@
+stages:
+  - build
+  - mirror
+
+variables:
+  APP_NAME: 'skopeo'
+  SKOPEO_VERSION: 'v1.19.0'
+  ECR_HELPER_VERSION: '0.10.1'
+  GCR_HELPER_VERSION: '2.1.30'
+  ACR_HELPER_VERSION: '0.7.0'
+  CRED_HELPERS_DIR: 'dist'
+  STORAGE_DRIVER: 'vfs'
+
+distributives:
+  stage: build
+  image: public.ecr.aws/docker/library/debian:trixie-slim
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - echo "Update and install required system packages and dependencies"
+    - apt-get -qq update
+    - apt-get -qq install -y wget
+
+    - mkdir -p "$CRED_HELPERS_DIR"
+
+    - echo "Downloading Amazon ECR Credential Helper"
+    - wget -nv "https://amazon-ecr-credential-helper-releases.s3.us-east-2.amazonaws.com/$ECR_HELPER_VERSION/linux-amd64/docker-credential-ecr-login"
+    - wget -nv "https://amazon-ecr-credential-helper-releases.s3.us-east-2.amazonaws.com/$ECR_HELPER_VERSION/linux-amd64/docker-credential-ecr-login.sha256"
+    - sha256sum -c --ignore-missing docker-credential-ecr-login.sha256
+    - mv docker-credential-ecr-login "$CRED_HELPERS_DIR"
+
+    - echo "Downloading GCR Credential Helper"
+    - wget -nv "https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v$GCR_HELPER_VERSION/docker-credential-gcr_linux_amd64-${GCR_HELPER_VERSION}.tar.gz"
+    - wget -nv "https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v$GCR_HELPER_VERSION/checksums.txt" -O docker-credential-gcr.sha256
+    - sha256sum -c --ignore-missing docker-credential-gcr.sha256
+    - tar -xzf "docker-credential-gcr_linux_amd64-${GCR_HELPER_VERSION}.tar.gz" docker-credential-gcr
+    - mv docker-credential-gcr "$CRED_HELPERS_DIR"
+
+    - echo "Downloading ACR Credential Helper"
+    - wget -nv "https://github.com/chrismellard/docker-credential-acr-env/releases/download/$ACR_HELPER_VERSION/docker-credential-acr-env_${ACR_HELPER_VERSION}_linux_amd64.tar.gz"
+    - wget -nv "https://github.com/chrismellard/docker-credential-acr-env/releases/download/$ACR_HELPER_VERSION/checksums.txt" -O docker-credential-acr.sha256
+    - sha256sum -c --ignore-missing docker-credential-acr.sha256
+    - tar -xzf "docker-credential-acr-env_${ACR_HELPER_VERSION}_linux_amd64.tar.gz" docker-credential-acr-env
+    - mv docker-credential-acr-env "$CRED_HELPERS_DIR"
+  artifacts:
+    paths:
+      - $CRED_HELPERS_DIR
+
+images:
+  stage: build
+  needs:
+    - distributives
+  dependencies:
+    - distributives
+  image: quay.io/buildah/stable:v1.41.5
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - buildah build -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME"
+        --build-arg SKOPEO_VERSION="$SKOPEO_VERSION"
+        --build-arg CRED_HELPERS_DIR="$CRED_HELPERS_DIR"
+    - buildah push "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME"
+
+mirror-git-github:
+  stage: mirror
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'push'
+  dependencies: []
+  image: docker.io/alpine/git:v2.49.1
+  variables:
+    GIT_STRATEGY: clone
+  script:
+    - git remote add github "https://$GITHUB_USER:$GITHUB_PASSWORD@github.com/flakybitnet/skopeo-oci.git"
+    - if [ -n "${CI_COMMIT_BRANCH-}" ]; then
+        git checkout -b "$CI_COMMIT_BRANCH";
+        git fetch github;
+        git push --force-with-lease github "$CI_COMMIT_BRANCH";
+        fi
+    - if [ -n "${CI_COMMIT_TAG-}" ]; then
+        git push github tag $CI_COMMIT_TAG;
+        fi
+
+mirror-image-github:
+  stage: mirror
+  rules:
+    - if: $CI_COMMIT_TAG
+  dependencies: []
+  image: public.ecr.aws/flakybitnet/skopeo:1.19.0-fb1
+  variables:
+    REGISTRY: ghcr.io
+    IMAGE: flakybitnet/skopeo
+    GIT_STRATEGY: none
+  script:
+    - echo "$GITHUB_PASSWORD" | skopeo login -u "$GITHUB_USER" --password-stdin "$REGISTRY"
+    - skopeo copy "docker://$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME" "docker://$REGISTRY/$IMAGE:$CI_COMMIT_REF_NAME"
+
+mirror-image-quay:
+  stage: mirror
+  rules:
+    - if: $CI_COMMIT_TAG
+  dependencies: []
+  image: public.ecr.aws/flakybitnet/skopeo:1.19.0-fb1
+  variables:
+    REGISTRY: quay.io
+    IMAGE: flakybitnet/skopeo
+    GIT_STRATEGY: none
+  script:
+    - echo "$QUAY_PASSWORD" | skopeo login -u "$QUAY_USER" --password-stdin "$REGISTRY"
+    - skopeo copy "docker://$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME" "docker://$REGISTRY/$IMAGE:$CI_COMMIT_REF_NAME"
+
+mirror-image-amazon:
+  stage: mirror
+  rules:
+    - if: $CI_COMMIT_TAG
+  dependencies: []
+  image: public.ecr.aws/flakybitnet/skopeo:1.19.0-fb1
+  variables:
+    REGISTRY: public.ecr.aws
+    IMAGE: flakybitnet/skopeo
+    GIT_STRATEGY: none
+    AWS_ACCESS_KEY_ID: $ECR_USER
+    AWS_SECRET_ACCESS_KEY: $ECR_PASSWORD
+  script:
+    - printf '{"credHelpers":{"%s":"%s"}}' "$REGISTRY" 'ecr-login' > "$HOME/auth.json"
+    - skopeo copy "docker://$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME" "docker://$REGISTRY/$IMAGE:$CI_COMMIT_REF_NAME"
+        --dest-authfile="$HOME/auth.json"
