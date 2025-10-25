@@ -4,7 +4,7 @@ stages:
 
 variables:
   APP_NAME: 'skopeo'
-  SKOPEO_VERSION: 'v1.19.0'
+  SKOPEO_VERSION: 'v1.20.0'
   ECR_HELPER_VERSION: '0.10.1'
   GCR_HELPER_VERSION: '2.1.30'
   ACR_HELPER_VERSION: '0.7.0'
